@@ -39,3 +39,73 @@
 
 # debug information files
 *.dwo
+
+# Build directories
+build/
+build-*/
+out/
+dist/
+bin/
+lib/
+
+# CMake generated files
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+*.cmake
+!CMakeLists.txt
+
+# IDE and Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Logs and temporary files
+*.log
+*.tmp
+*.temp
+*.bak
+*.backup
+
+# Dependencies
+vcpkg_installed/
+conan/
+node_modules/
+
+# Package manager files
+*.lock
+package-lock.json
+yarn.lock
+
+# Test coverage
+coverage/
+*.gcov
+*.gcda
+*.gcno
+
+# Profiling
+*.prof
+*.gprof
+
+# Documentation build
+docs/_build/
+docs/build/
+
+# Backup files
+*~
+*.orig
+*.rej
