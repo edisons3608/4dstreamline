@@ -30,10 +30,13 @@ int main() {
     
     std::cout << "\n--- Original code continues below ---\n" << std::endl;
     
-    std::string dicomFolderPath = "/Users/edisonsun/Documents/4Dsamples/D29/4D/1";
+    std::string x_phase_path = "/Users/edisonsun/Documents/4Dsamples/D29/4D/1";
+    std::string y_phase_path = "/Users/edisonsun/Documents/4Dsamples/D29/4D/2";
+    std::string z_phase_path = "/Users/edisonsun/Documents/4Dsamples/D29/4D/3";
+    std::string mag_path = "/Users/edisonsun/Documents/4Dsamples/D29/4D/mag";
     
     // Get 4D volume dimensions using the utility function
-    std::vector<int> dimensions = get4DSize(dicomFolderPath);
+    std::vector<int> dimensions = get4DSize(x_phase_path);
     int xLength = dimensions[0];
     int yLength = dimensions[1];
     int zLength = dimensions[2];
@@ -46,7 +49,14 @@ int main() {
     std::cout << "zLength (Slices): " << zLength << std::endl;
     std::cout << "tLength (Time points): " << tLength << std::endl;
 
-    Volume4D volume = DicomFolderToVolume4D(dicomFolderPath);
+    Volume4D x_phase = DicomFolderToVolume4D(x_phase_path);
+    Volume4D y_phase = DicomFolderToVolume4D(y_phase_path);
+    Volume4D z_phase = DicomFolderToVolume4D(z_phase_path);
+    Volume4D mag = DicomFolderToVolume4D(mag_path);
+
+    
+    
+    
 
     return 0;
 }

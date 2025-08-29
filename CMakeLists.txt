@@ -4,6 +4,9 @@ project(DicomReader)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+# Find VTK
+find_package(VTK REQUIRED)
+
 # DCMTK paths for Homebrew on macOS
 set(DCMTK_ROOT "/opt/homebrew/Cellar/dcmtk/3.6.9")
 set(DCMTK_INCLUDE_DIRS "${DCMTK_ROOT}/include")
@@ -33,4 +36,8 @@ target_include_directories(main PRIVATE
 
 # Link DCMTK libraries
 target_link_directories(main PRIVATE ${DCMTK_LIBRARY_DIRS})
-target_link_libraries(main ${DCMTK_LIBRARIES}) 
+target_link_libraries(main ${DCMTK_LIBRARIES} ${VTK_LIBRARIES})
+
+# Add VTK test executable
+add_executable(vtk_test vtk_test.cpp)
+target_link_libraries(vtk_test ${VTK_LIBRARIES}) 
