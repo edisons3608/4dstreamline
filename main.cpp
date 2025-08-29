@@ -115,8 +115,8 @@ int main() {
     vtkSmartPointer<vtkPoints> seedPoints = vtkSmartPointer<vtkPoints>::New();
     
     // Threshold parameters for aorta flow
-    float minVelocityThreshold = 1000.0; // cm/s - minimum velocity to show
-    float maxVelocityThreshold = 4000.0; // cm/s - maximum velocity to show
+    float minVelocityThreshold = 1.0; // cm/s - minimum velocity to show
+    float maxVelocityThreshold = 300.0; // cm/s - maximum velocity to show
     
     // ROI parameters for aorta
     float roiCenterX = 0.0;

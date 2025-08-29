@@ -331,8 +331,8 @@ Volume4D rescalePhase(const std::string& dicomFolderPath) {
         rescaleIntercept = 0.0;
     }
     // for now
-    rescaleSlope = 1.0;
-    rescaleIntercept = 0.0;
+    //rescaleSlope = 1.0;
+    //rescaleIntercept = 0.0;
     std::cout << "rescaleSlope: " << rescaleSlope << std::endl;
     std::cout << "rescaleIntercept: " << rescaleIntercept << std::endl;
     for (std::size_t x = 0; x < volume.size_x(); x++) {
