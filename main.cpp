@@ -31,6 +31,14 @@
 #include <vtkInteractorStyleTrackballCamera.h>
 #include <vtkType.h>
 
+// VTK includes for streamline visualization
+#include <vtkStreamTracer.h>
+#include <vtkLineSource.h>
+#include <vtkCellArray.h>
+#include <vtkUnsignedCharArray.h>
+#include <vtkLookupTable.h>
+#include <vtkColorTransferFunction.h>
+
 int main() {
     
     std::string x_phase_path = "/Users/edisonsun/Documents/4Dsamples/D29/4D/1";
@@ -41,15 +49,8 @@ int main() {
     Volume4D x_vel = generateVelVecField(x_phase_path);
     Volume4D y_vel = generateVelVecField(y_phase_path);
     Volume4D z_vel = generateVelVecField(z_phase_path);
+    Volume4D mag = DicomFolderToVolume4D(mag_path);
 
-    // Get 4D volume dimensions using the utility function
-    /*std::vector<int> dimensions = get4DSize(x_phase_path);
-    int xLength = dimensions[0];
-    int yLength = dimensions[1];
-    int zLength = dimensions[2];
-    int tLength = dimensions[3];
-    */
-    
     // Check if velocity volumes were loaded successfully
     if (x_vel.empty() || y_vel.empty() || z_vel.empty()) {
         std::cerr << "Error: Failed to load velocity volumes" << std::endl;
@@ -59,39 +60,76 @@ int main() {
     std::cout << "Velocity volumes loaded successfully!" << std::endl;
     std::cout << "X velocity dimensions: " << x_vel.size_x() << " x " << x_vel.size_y() << " x " << x_vel.size_z() << " x " << x_vel.size_t() << std::endl;
     std::cout << "Y velocity dimensions: " << y_vel.size_x() << " x " << y_vel.size_y() << " x " << y_vel.size_z() << " x " << y_vel.size_t() << std::endl;
-    std::cout << "Z velocity dimensions: " << z_vel.size_x() << " x " << z_vel.size_y() << " x " << z_vel.size_z() << " x " << z_vel.size_t() << std::endl;
+    std::cout << "Z velocity dimensions: " << z_vel.size_x() << " x " << z_vel.size_y() << " x " << z_vel.size_z() << " x " << x_vel.size_t() << std::endl;
 
     // Create VTK visualization for velocity field
-    std::cout << "\nCreating VTK velocity field visualization..." << std::endl;
+    std::cout << "\nCreating VTK streamline visualization..." << std::endl;
     
     // Create renderer
     vtkSmartPointer<vtkRenderer> renderer = vtkSmartPointer<vtkRenderer>::New();
     renderer->SetBackground(0.1, 0.1, 0.1);
 
-    // Create points and vectors for the velocity field
-    vtkSmartPointer<vtkPoints> points = vtkSmartPointer<vtkPoints>::New();
+    // Create 3D volume data for velocity field
+    vtkSmartPointer<vtkImageData> velocityField = vtkSmartPointer<vtkImageData>::New();
+    velocityField->SetDimensions(x_vel.size_x(), x_vel.size_y(), x_vel.size_z());
+    velocityField->AllocateScalars(VTK_FLOAT, 3); // 3 components for velocity vectors
+    
+    // Copy velocity data to VTK volume (using first time point)
+    int timePoint = 0;
+    for (std::size_t z = 0; z < x_vel.size_z(); z++) {
+        for (std::size_t y = 0; y < x_vel.size_y(); y++) {
+            for (std::size_t x = 0; x < x_vel.size_x(); x++) {
+                float vx = x_vel.at(x, y, z, timePoint);
+                float vy = y_vel.at(x, y, z, timePoint);
+                float vz = z_vel.at(x, y, z, timePoint);
+                
+                // Store velocity components
+                float* ptr = static_cast<float*>(velocityField->GetScalarPointer(x, y, z));
+                ptr[0] = vx;
+                ptr[1] = vy;
+                ptr[2] = vz;
+            }
+        }
+    }
+    
+    // Set velocity field as vector field
     vtkSmartPointer<vtkFloatArray> vectors = vtkSmartPointer<vtkFloatArray>::New();
     vectors->SetNumberOfComponents(3);
     vectors->SetName("Velocity");
-
-    // Sample the velocity field (use every nth point to avoid overcrowding)
-    int sampleRate = 4; // Adjust this to control density of arrows
-    int timePoint = 0; // Use first time point for now
+    
+    // Copy velocity data to vector array
+    for (std::size_t z = 0; z < x_vel.size_z(); z++) {
+        for (std::size_t y = 0; y < x_vel.size_y(); y++) {
+            for (std::size_t x = 0; x < x_vel.size_x(); x++) {
+                float vx = x_vel.at(x, y, z, timePoint);
+                float vy = y_vel.at(x, y, z, timePoint);
+                float vz = z_vel.at(x, y, z, timePoint);
+                vectors->InsertNextTuple3(vx, vy, vz);
+            }
+        }
+    }
+    
+    velocityField->GetPointData()->SetVectors(vectors);
+    
+    // Create seed points for streamlines
+    vtkSmartPointer<vtkPoints> seedPoints = vtkSmartPointer<vtkPoints>::New();
     
     // Threshold parameters for aorta flow
-    float minVelocityThreshold = 1000.0; // cm/s - minimum velocity to show (reduced from 5.0)
-    float maxVelocityThreshold = 4000.0; // cm/s - maximum velocity to show (increased from 150.0)
+    float minVelocityThreshold = 1000.0; // cm/s - minimum velocity to show
+    float maxVelocityThreshold = 4000.0; // cm/s - maximum velocity to show
     
-    // Simple ROI parameters for aorta (adjust these based on your data)
-    // Assuming aorta is roughly in the center of the volume
-    float roiCenterX = 0.0; // Center of normalized coordinates
+    // ROI parameters for aorta
+    float roiCenterX = 0.0;
     float roiCenterY = 0.0;
     float roiCenterZ = 0.0;
-    float roiRadius = 0.8; // Radius of ROI (increased from 0.6 to cover more of the volume)
+    float roiRadius = 0.8;
     
-    std::cout << "Sampling velocity field with sample rate: " << sampleRate << std::endl;
+    std::cout << "Creating seed points for streamlines..." << std::endl;
     std::cout << "Velocity thresholds: " << minVelocityThreshold << " to " << maxVelocityThreshold << " cm/s" << std::endl;
     std::cout << "ROI radius: " << roiRadius << " (normalized coordinates)" << std::endl;
+    
+    // Sample points for seed generation (use every nth point to avoid overcrowding)
+    int sampleRate = 8; // Adjust this to control density of streamlines
     
     for (std::size_t z = 0; z < x_vel.size_z(); z += sampleRate) {
         for (std::size_t y = 0; y < x_vel.size_y(); y += sampleRate) {
@@ -103,7 +141,7 @@ int main() {
                 
                 // Calculate velocity magnitude
                 float magnitude = sqrt(vx*vx + vy*vy + vz*vz);
-                std::cout << "magnitude: " << magnitude << std::endl;
+                
                 // Check velocity magnitude threshold (aorta flow range)
                 if (magnitude >= minVelocityThreshold && magnitude <= maxVelocityThreshold) {
                     // Normalize coordinates to [-1, 1] range
@@ -117,52 +155,57 @@ int main() {
                                               (nz - roiCenterZ)*(nz - roiCenterZ));
                     
                     if (distFromCenter <= roiRadius) {
-                        points->InsertNextPoint(nx, ny, nz);
-                        
-                        // Store normalized velocity vector for consistent arrow sizes
-                        if (magnitude > 0) {
-                            vectors->InsertNextTuple3(vx/magnitude, vy/magnitude, vz/magnitude);
-                        } else {
-                            vectors->InsertNextTuple3(0, 0, 0);
-                        }
+                        seedPoints->InsertNextPoint(nx, ny, nz);
                     }
                 }
             }
         }
     }
     
-    std::cout << "Created " << points->GetNumberOfPoints() << " velocity vectors" << std::endl;
-
-    // Create polydata
-    vtkSmartPointer<vtkPolyData> polydata = vtkSmartPointer<vtkPolyData>::New();
-    polydata->SetPoints(points);
-    polydata->GetPointData()->SetVectors(vectors);
-
-    // Create arrow source for vector representation
-    vtkSmartPointer<vtkArrowSource> arrowSource = vtkSmartPointer<vtkArrowSource>::New();
-    arrowSource->SetTipLength(0.2);
-    arrowSource->SetTipRadius(0.1);
-    arrowSource->SetShaftRadius(0.03);
-
-    // Create glyph3D to place arrows at each point
-    vtkSmartPointer<vtkGlyph3D> glyph3D = vtkSmartPointer<vtkGlyph3D>::New();
-    glyph3D->SetInputData(polydata);
-    glyph3D->SetSourceConnection(arrowSource->GetOutputPort());
-    glyph3D->SetVectorModeToUseVector();
-    glyph3D->SetScaleModeToScaleByVector();
-    glyph3D->SetScaleFactor(0.3); // Adjust arrow size
-    glyph3D->Update();
-
-    // Create mapper
+    std::cout << "Created " << seedPoints->GetNumberOfPoints() << " seed points for streamlines" << std::endl;
+    
+    // Create polydata for seed points
+    vtkSmartPointer<vtkPolyData> seedData = vtkSmartPointer<vtkPolyData>::New();
+    seedData->SetPoints(seedPoints);
+    
+    // Create streamline tracer
+    vtkSmartPointer<vtkStreamTracer> streamTracer = vtkSmartPointer<vtkStreamTracer>::New();
+    streamTracer->SetInputData(velocityField);
+    streamTracer->SetSourceData(seedData);
+    streamTracer->SetMaximumPropagation(100); // Maximum steps for streamline
+    streamTracer->SetIntegrationStepUnit(2); // Cell length units
+    streamTracer->SetInitialIntegrationStep(0.1); // Initial step size
+    streamTracer->SetMinimumIntegrationStep(0.01); // Minimum step size
+    streamTracer->SetMaximumIntegrationStep(0.5); // Maximum step size
+    streamTracer->SetIntegrationDirection(0); // Forward integration
+    streamTracer->SetComputeVorticity(1); // Compute vorticity for coloring
+    streamTracer->Update();
+    
+    std::cout << "Generated " << streamTracer->GetOutput()->GetNumberOfLines() << " streamlines" << std::endl;
+    
+    // Create color lookup table for velocity magnitude
+    vtkSmartPointer<vtkLookupTable> colorTable = vtkSmartPointer<vtkLookupTable>::New();
+    colorTable->SetNumberOfColors(256);
+    colorTable->SetHueRange(0.667, 0.0); // Blue to Red (low to high velocity)
+    colorTable->SetSaturationRange(1.0, 1.0);
+    colorTable->SetValueRange(1.0, 1.0);
+    colorTable->SetAlphaRange(0.8, 1.0);
+    colorTable->Build();
+    
+    // Create mapper for streamlines
     vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
-    mapper->SetInputConnection(glyph3D->GetOutputPort());
-
-    // Create actor
+    mapper->SetInputConnection(streamTracer->GetOutputPort());
+    mapper->SetScalarModeToUsePointFieldData();
+    mapper->SelectColorArray("Vorticity");
+    mapper->SetScalarRange(minVelocityThreshold, maxVelocityThreshold);
+    mapper->SetLookupTable(colorTable);
+    
+    // Create actor for streamlines
     vtkSmartPointer<vtkActor> actor = vtkSmartPointer<vtkActor>::New();
     actor->SetMapper(mapper);
-    actor->GetProperty()->SetColor(0.0, 1.0, 0.0); // Green arrows
-    actor->GetProperty()->SetOpacity(0.8);
-
+    actor->GetProperty()->SetLineWidth(2.0); // Make streamlines thicker
+    actor->GetProperty()->SetOpacity(0.9);
+    
     // Add actor to renderer
     renderer->AddActor(actor);
 
@@ -170,7 +213,7 @@ int main() {
     vtkSmartPointer<vtkRenderWindow> renderWindow = vtkSmartPointer<vtkRenderWindow>::New();
     renderWindow->AddRenderer(renderer);
     renderWindow->SetSize(1000, 800);
-    renderWindow->SetWindowName("4D Aorta Velocity Field Visualization");
+    renderWindow->SetWindowName("4D Aorta Streamline Visualization");
 
     // Create render window interactor
     vtkSmartPointer<vtkRenderWindowInteractor> renderWindowInteractor = 
@@ -201,10 +244,11 @@ int main() {
     camera->SetFocalPoint(0, 0, 0);
     camera->SetViewUp(0, 0, 1);
 
-    std::cout << "Starting aorta velocity field visualization..." << std::endl;
+    std::cout << "Starting aorta streamline visualization..." << std::endl;
     std::cout << "Use mouse to rotate, scroll to zoom, and right-click to pan" << std::endl;
-    std::cout << "Green arrows represent aorta velocity vectors" << std::endl;
-    std::cout << "Velocity range: " << minVelocityThreshold << " to " << maxVelocityThreshold << " m/s" << std::endl;
+    std::cout << "Colored streamlines represent aorta flow patterns" << std::endl;
+    std::cout << "Color indicates velocity magnitude (Blue=low, Red=high)" << std::endl;
+    std::cout << "Velocity range: " << minVelocityThreshold << " to " << maxVelocityThreshold << " cm/s" << std::endl;
 
     // Start rendering
     renderWindow->Render();
