@@ -4,6 +4,24 @@
 
 A C++ application for visualizing 4D blood flow patterns in the aorta using VTK streamlines.
 
+## Technical Details
+
+### DICOM Rescaling and Velocity Conversion
+
+The application processes DICOM phase images to extract velocity information using the following mathematical transformations:
+
+1. **DICOM Rescaling**: Raw pixel values are converted to physical units using DICOM metadata:
+   ```
+   Physical Value = (Raw Pixel Value × Slope) + Intercept
+   ```
+
+2. **Phase to Velocity Conversion**: Phase values are converted to velocity using the VENC (Velocity ENCoding) parameter:
+   ```
+   Velocity = (Phase Value / π) × VENC
+   ```
+
+This conversion transforms phase-encoded MRI data into actual blood flow velocities for 3D streamline visualization.
+
 ## Features
 
 - **4D Velocity Field Visualization**: Loads and displays velocity data from DICOM phase images
