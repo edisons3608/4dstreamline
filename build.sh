@@ -1,5 +1,5 @@
 #!/bin/bash
-
+clear
 # Create build directory if it doesn't exist
 mkdir -p build
 
@@ -13,3 +13,5 @@ cmake ..
 make
 
 echo "Build complete! Run with: ./main" 
+
+./main

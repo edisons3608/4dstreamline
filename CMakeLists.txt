@@ -12,16 +12,24 @@ set(DCMTK_LIBRARY_DIRS "${DCMTK_ROOT}/lib")
 # DCMTK libraries needed for basic DICOM operations
 set(DCMTK_LIBRARIES
     dcmdata
+    dcmimgle
     ofstd
     oflog
     oficonv
 )
 
-# Add executable
-add_executable(main main.cpp)
+# Add executable with all source files
+add_executable(main 
+    main.cpp
+    dicom_utils.cpp
+    Volume4D.cpp
+)
 
-# Include DCMTK headers
-target_include_directories(main PRIVATE ${DCMTK_INCLUDE_DIRS})
+# Include DCMTK headers and project headers
+target_include_directories(main PRIVATE 
+    ${DCMTK_INCLUDE_DIRS}
+    ${CMAKE_CURRENT_SOURCE_DIR}
+)
 
 # Link DCMTK libraries
 target_link_directories(main PRIVATE ${DCMTK_LIBRARY_DIRS})
