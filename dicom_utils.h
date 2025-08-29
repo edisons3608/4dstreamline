@@ -14,6 +14,14 @@
 Volume4D readDicomToVolume4D(const std::string& filepath);
 
 /**
+ * Read DICOM files from a folder and return a Volume4D object
+ * 
+ * @param dicomFolderPath Path to the folder containing DICOM files
+ * @return Volume4D containing the 4D volume (empty if failed)
+ */
+Volume4D DicomFolderToVolume4D(const std::string& dicomFolderPath);
+
+/**
  * Get 4D volume dimensions from a folder containing DICOM files
  * 
  * @param dicomFolderPath Path to the folder containing DICOM files

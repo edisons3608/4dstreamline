@@ -45,7 +45,9 @@ int main() {
     std::cout << "yLength (Rows): " << yLength << std::endl;
     std::cout << "zLength (Slices): " << zLength << std::endl;
     std::cout << "tLength (Time points): " << tLength << std::endl;
-    
+
+    Volume4D volume = DicomFolderToVolume4D(dicomFolderPath);
+
     return 0;
 }
 

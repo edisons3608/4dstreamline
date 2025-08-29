@@ -5,6 +5,8 @@
 #include <dcmtk/dcmdata/dcdeftag.h>
 #include <dcmtk/dcmdata/dcuid.h>
 #include <iostream>
+#include <vector>
+#include <string>
 #include <filesystem>
 
 /**
@@ -34,7 +36,7 @@ Volume4D readDicomToVolume4D(const std::string& filepath) {
         std::cout << "Reading DICOM file: " << filepath << std::endl;
         std::cout << "Dimensions: " << width << " x " << height << " (bit depth: " << depth << ")" << std::endl;
         
-        // Create Volume4D with single time point (1 slice)
+
         volume.resize(width, height, 1, 1);
         
         // Get pixel data
@@ -121,13 +123,55 @@ Volume4D readDicomToVolume4D(const std::string& filepath) {
     return volume;
 }
 
+Volume4D DicomFolderToVolume4D(const std::string& dicomFolderPath) {
+    Volume4D volume;
+    // Get filepaths for all files in dicomFolderPath
+    std::vector<std::string> dicomFilePaths;
+
+    std::vector<int> dimensions = get4DSize(dicomFolderPath);
+
+    int slices = dimensions[2]*dimensions[3];
+
+    volume.resize(dimensions[0], dimensions[1], dimensions[2], dimensions[3]);
+    
+    // First, collect all file paths
+    for (const auto& entry : std::filesystem::directory_iterator(dicomFolderPath)) {
+        if (entry.is_regular_file()) {
+            dicomFilePaths.push_back(entry.path().string());
+        }
+    }
+    
+    // Sort the file paths after collecting all of them
+    std::sort(dicomFilePaths.begin(), dicomFilePaths.end());
+    
+    // Now iterate through the sorted paths
+    int t = 0;
+    int z = 0;
+    for (size_t i = 0; i < dicomFilePaths.size(); i++) {
+
+        std::cout << "i: " << i << std::endl;
+        std::cout << "Filepath: " << dicomFilePaths[i] << std::endl;
+        Volume4D slice = readDicomToVolume4D(dicomFilePaths[i]);
+        
+        for (int x = 0; x < dimensions[0]; x++) {
+            for (int y = 0; y < dimensions[1]; y++) {
+                volume.at(x, y, z, t) = slice.at(x, y, 0, 0);
+            }
+        }
+
+        t = i / dimensions[2];
+        z = i % dimensions[2]; 
+    }
+
+    std::cout << "Slices: " << slices << std::endl;
+    return volume;
+}
+
 std::vector<int> get4DSize(const std::string& dicomFolderPath) {
     std::vector<int> dimensions = {0, 0, 0, 0}; // [xLength, yLength, zLength, tLength]
     
     try {
-        // We'll get the volume size (Rows, Columns, Number of Slices) from the DICOM header.
-        // To do this, we need to read one DICOM file in the folder and extract Rows (0028,0010), 
-        // Columns (0028,0011), and Number of Slices (0020,1002) or count files as fallback.
+
 
         int xLength = 0, yLength = 0, zLength = 0, tLength = 0, numSlices = 0;
         bool gotVolumeInfo = false;
@@ -153,7 +197,7 @@ std::vector<int> get4DSize(const std::string& dicomFolderPath) {
                         xLength = tempCols;
                     }
 
-                    // Alternative: try CardiacNumberOfImages
+                    // chekced w/ MATLAB dicominfo - should be in this elem
                     if (tLength == 0) {
                         // Try to read CardiacNumberOfImages as string first (since it's stored as string)
                         OFString tempCardiacImagesStr;
