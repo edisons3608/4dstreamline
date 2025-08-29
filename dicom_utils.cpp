@@ -1,4 +1,5 @@
 #include "dicom_utils.h"
+#include "Volume4D.h"
 #include <dcmtk/dcmimgle/dcmimage.h>
 #include <dcmtk/dcmdata/dctypes.h>
 #include <dcmtk/dcmdata/dcfilefo.h>
@@ -33,8 +34,8 @@ Volume4D readDicomToVolume4D(const std::string& filepath) {
         int height = image->getHeight();
         int depth = image->getDepth();
         
-        std::cout << "Reading DICOM file: " << filepath << std::endl;
-        std::cout << "Dimensions: " << width << " x " << height << " (bit depth: " << depth << ")" << std::endl;
+        //std::cout << "Reading DICOM file: " << filepath << std::endl;
+        //std::cout << "Dimensions: " << width << " x " << height << " (bit depth: " << depth << ")" << std::endl;
         
 
         volume.resize(width, height, 1, 1);
@@ -51,7 +52,7 @@ Volume4D readDicomToVolume4D(const std::string& filepath) {
         // Handle non-standard bit depths by treating them as 16-bit
         int effectiveDepth = depth;
         if (depth != 8 && depth != 16 && depth != 32) {
-            std::cout << "Note: Converting non-standard bit depth " << depth << " to 16-bit" << std::endl;
+            //std::cout << "Note: Converting non-standard bit depth " << depth << " to 16-bit" << std::endl;
             effectiveDepth = 16;
         }
         
@@ -110,8 +111,8 @@ Volume4D readDicomToVolume4D(const std::string& filepath) {
             }
             float mean = sum / count;
             
-            std::cout << "✓ Successfully read " << count << " pixel values into Volume4D" << std::endl;
-            std::cout << "Min: " << min_val << ", Max: " << max_val << ", Mean: " << mean << std::endl;
+            //std::cout << "✓ Successfully read " << count << " pixel values into Volume4D" << std::endl;
+            //std::cout << "Min: " << min_val << ", Max: " << max_val << ", Mean: " << mean << std::endl;
         }
         
         delete image;
@@ -144,13 +145,14 @@ Volume4D DicomFolderToVolume4D(const std::string& dicomFolderPath) {
     // Sort the file paths after collecting all of them
     std::sort(dicomFilePaths.begin(), dicomFilePaths.end());
     
+    
     // Now iterate through the sorted paths
     int t = 0;
     int z = 0;
     for (size_t i = 0; i < dicomFilePaths.size(); i++) {
 
-        std::cout << "i: " << i << std::endl;
-        std::cout << "Filepath: " << dicomFilePaths[i] << std::endl;
+        //std::cout << "i: " << i << std::endl;
+        //std::cout << "Filepath: " << dicomFilePaths[i] << std::endl;
         Volume4D slice = readDicomToVolume4D(dicomFilePaths[i]);
         
         for (int x = 0; x < dimensions[0]; x++) {
@@ -163,7 +165,7 @@ Volume4D DicomFolderToVolume4D(const std::string& dicomFolderPath) {
         z = i % dimensions[2]; 
     }
 
-    std::cout << "Slices: " << slices << std::endl;
+    //std::cout << "Slices: " << slices << std::endl;
     return volume;
 }
 
@@ -251,4 +253,99 @@ std::vector<int> get4DSize(const std::string& dicomFolderPath) {
     }
     
     return dimensions;
+}
+
+Volume4D generateVelVecField(const std::string& phase_path){
+    std::cout << "phase_path: " << phase_path << std::endl;
+    float venc = 1.70;
+
+
+    Volume4D rescale = rescalePhase(phase_path);
+
+
+
+    Volume4D vel = applyVENC(rescale, venc);
+
+
+    return vel;
+
+}
+Volume4D applyVENC(Volume4D rescaledPhase, float venc){
+    Volume4D velocityField = rescaledPhase;
+    
+    // Convert phase to velocity: velocity = (phase / π) × VENC
+    const float PI = 3.14159265359f;
+    
+    for (std::size_t x = 0; x < velocityField.size_x(); x++) {
+        for (std::size_t y = 0; y < velocityField.size_y(); y++) {
+            for (std::size_t z = 0; z < velocityField.size_z(); z++) {
+                for (std::size_t t = 0; t < velocityField.size_t(); t++) {
+                    float phaseValue = velocityField.at(x, y, z, t);
+                    float velocityValue = (phaseValue / PI) * venc;
+                    velocityField.at(x, y, z, t) = velocityValue;
+                }
+            }
+        }
+    }
+    
+    return velocityField;
+}
+Volume4D rescalePhase(const std::string& dicomFolderPath) {
+    Volume4D volume = DicomFolderToVolume4D(dicomFolderPath);
+    
+    // Find the first DICOM file in the folder to extract rescaling parameters
+    std::string firstDicomFile;
+    try {
+        for (const auto& entry : std::filesystem::directory_iterator(dicomFolderPath)) {
+            if (entry.is_regular_file()) {
+                firstDicomFile = entry.path().string();
+                break;
+            }
+        }
+    } catch (const std::exception& e) {
+        std::cerr << "Error accessing folder: " << e.what() << std::endl;
+        return volume;
+    }
+    
+    if (firstDicomFile.empty()) {
+        std::cerr << "No DICOM files found in folder: " << dicomFolderPath << std::endl;
+        return volume;
+    }
+    
+    DcmFileFormat fileformat;
+    if (fileformat.loadFile(firstDicomFile.c_str()).bad()) {
+        std::cerr << "Error loading DICOM file: " << firstDicomFile << std::endl;
+        return volume;
+    }
+    
+    DcmDataset *dataset = fileformat.getDataset();
+    
+    Float64 rescaleSlope = 1.0;
+    Float64 rescaleIntercept = 0.0;
+    
+    // Try to get rescaling parameters, use defaults if not found
+    if (dataset->findAndGetFloat64(DcmTag(0x0028, 0x1053), rescaleSlope).bad()) {
+        rescaleSlope = 1.0;
+    }
+    if (dataset->findAndGetFloat64(DcmTag(0x0028, 0x1052), rescaleIntercept).bad()) {
+        rescaleIntercept = 0.0;
+    }
+    // for now
+    rescaleSlope = 1.0;
+    rescaleIntercept = 0.0;
+    std::cout << "rescaleSlope: " << rescaleSlope << std::endl;
+    std::cout << "rescaleIntercept: " << rescaleIntercept << std::endl;
+    for (std::size_t x = 0; x < volume.size_x(); x++) {
+        for (std::size_t y = 0; y < volume.size_y(); y++) {
+            for (std::size_t z = 0; z < volume.size_z(); z++) {
+                for (std::size_t t = 0; t < volume.size_t(); t++) {
+                    float originalValue = volume.at(x, y, z, t);
+                    float rescaledValue = originalValue * rescaleSlope + rescaleIntercept;
+                    volume.at(x, y, z, t) = rescaledValue;
+                }
+            }
+        }
+    }
+    
+    return volume;
 }

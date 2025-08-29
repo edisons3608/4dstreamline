@@ -8,7 +8,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 find_package(VTK REQUIRED)
 
 # DCMTK paths for Homebrew on macOS
-set(DCMTK_ROOT "/opt/homebrew/Cellar/dcmtk/3.6.9")
+set(DCMTK_ROOT "/opt/homebrew/opt/dcmtk")
 set(DCMTK_INCLUDE_DIRS "${DCMTK_ROOT}/include")
 set(DCMTK_LIBRARY_DIRS "${DCMTK_ROOT}/lib")
 
@@ -39,5 +39,15 @@ target_link_directories(main PRIVATE ${DCMTK_LIBRARY_DIRS})
 target_link_libraries(main ${DCMTK_LIBRARIES} ${VTK_LIBRARIES})
 
 # Add VTK test executable
-add_executable(vtk_test vtk_test.cpp)
-target_link_libraries(vtk_test ${VTK_LIBRARIES}) 
+add_executable(vtk_test 
+    vtk_test.cpp
+    dicom_utils.cpp
+    Volume4D.cpp
+)
+target_include_directories(vtk_test PRIVATE 
+    ${VTK_INCLUDE_DIRS}
+    ${DCMTK_INCLUDE_DIRS}
+    ${CMAKE_CURRENT_SOURCE_DIR}
+)
+target_link_directories(vtk_test PRIVATE ${DCMTK_LIBRARY_DIRS})
+target_link_libraries(vtk_test ${VTK_LIBRARIES} ${DCMTK_LIBRARIES}) 

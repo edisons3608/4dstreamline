@@ -3,6 +3,7 @@
 
 #include <string>
 #include <vector>
+#include <filesystem>
 #include "Volume4D.h"
 
 /**
@@ -28,5 +29,32 @@ Volume4D DicomFolderToVolume4D(const std::string& dicomFolderPath);
  * @return Vector with 4 elements: [xLength, yLength, zLength, tLength]
  */
 std::vector<int> get4DSize(const std::string& dicomFolderPath);
+
+
+/**
+ * Apply VENC scaling to convert phase values to velocity values
+ * 
+ * @param rescaledPhase Input 4D phase volume
+ * @param venc Velocity encoding value in cm/s
+ * @return Volume4D containing velocity values
+ */
+Volume4D applyVENC(Volume4D rescaledPhase, float venc);
+
+/**
+ * Generate velocity vector field from a 4D phase volume folder
+ * 
+ * @param phase_path Path to folder containing DICOM files for the phase volume
+ * @return Volume4D containing the velocity field
+ */
+Volume4D generateVelVecField(const std::string& phase_path);
+
+
+/**
+ * Rescale phase Volume4D using RescaleSlope and RescaleIntercept from DICOM file
+ * 
+ * @param dicomFolderPath Path to folder containing DICOM files to extract rescaling parameters
+ * @return Rescaled Volume4D
+ */
+Volume4D rescalePhase(const std::string& dicomFolderPath);
 
 #endif // DICOM_UTILS_H 
