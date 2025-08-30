@@ -50,7 +50,7 @@ Expects 4D DICOM data organized as:
 mkdir build && cd build
 cmake ..
 make
-./4dstreamline
+./main
 ```
 
 ## Controls
