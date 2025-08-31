@@ -1,5 +1,7 @@
 # 4D Flow Aorta Streamline Visualization
 
+![4D Aorta Streamlines](assets/saved_d.gif)
+
 ![4D Aorta Streamlines](assets/sample.png)
 
 A C++ application for visualizing 4D Flow blood flow patterns in the aorta using VTK streamlines.

@@ -114,7 +114,7 @@ for t = 1:dim5
     axis equal tight;
     
     % Add pause for animation
-    pause(0.1);
+    pause(0.05);
     
     % Clear figure for next frame
     if t < dim5
