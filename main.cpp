@@ -41,10 +41,10 @@
 
 int main() {
     
-    std::string x_phase_path = "/Users/edisonsun/Documents/4Dsamples/D29/4D/1";
-    std::string y_phase_path = "/Users/edisonsun/Documents/4Dsamples/D29/4D/2";
-    std::string z_phase_path = "/Users/edisonsun/Documents/4Dsamples/D29/4D/3";
-    std::string mag_path = "/Users/edisonsun/Documents/4Dsamples/D29/4D/mag";
+    std::string x_phase_path = "/Users/edisonsun/Documents/4Dsamples/2150/4D/1";
+    std::string y_phase_path = "/Users/edisonsun/Documents/4Dsamples/2150/4D/2";
+    std::string z_phase_path = "/Users/edisonsun/Documents/4Dsamples/2150/4D/3";
+    std::string mag_path = "/Users/edisonsun/Documents/4Dsamples/2150/4D/mag";
 
     Volume4D x_vel = generateVelVecField(x_phase_path);
     Volume4D y_vel = generateVelVecField(y_phase_path);
