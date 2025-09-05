@@ -1,10 +1,10 @@
-# 4D Flow Aorta Streamline Visualization
+# 4D Flow MRI Streamline Visualization
 
-![4D Aorta Streamlines](assets/saved_d.gif)
+![4D Flow Streamlines](assets/saved_d.gif)
 
-![4D Aorta Streamlines](assets/sample.png)
+![4D Flow Streamlines](assets/sample.png)
 
-A C++ application for visualizing 4D Flow blood flow patterns in the aorta using VTK streamlines.
+A C++ application for visualizing 4D Flow blood flow patterns using VTK streamlines.
 
 ## Technical Details
 
@@ -30,7 +30,7 @@ This conversion transforms phase-encoded MRI data into actual blood flow velocit
 - **Interactive Streamlines**: GPU-accelerated streamline generation showing blood flow patterns
 - **Color-coded Flow**: Streamlines colored by velocity magnitude (Blue=low, Red=high)
 - **3D Navigation**: Interactive camera controls for exploring the 3D flow field
-- **ROI-based Seeding**: Automatic seed point generation within aorta region of interest
+- **ROI-based Seeding**: Automatic seed point generation within region of interest
 
 ## Dependencies
 
